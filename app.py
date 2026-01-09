@@ -95,24 +95,49 @@ if st.button("Analyze"):
     else:
         clean_text = preprocess_text(user_text)
 
+        # -------------------
         # Emotion features
+        # -------------------
         emotion_scores = extract_emotions(clean_text, emotion_dict)
-        emotion_vector = [emotion_scores[e] for e in emotion_list]
-        emotion_vector = csr_matrix([emotion_vector])
+        # Align emotion vector with training order
+        emotion_vector = [emotion_scores.get(e, 0) for e in emotion_list]
+        emotion_vector_sparse = csr_matrix([emotion_vector])
 
+        # -------------------
         # TF-IDF features
+        # -------------------
         tfidf_vector = tfidf.transform([clean_text])
 
+        # -------------------
         # Combine features
-        final_vector = hstack([tfidf_vector, emotion_vector])
+        # -------------------
+        final_vector = hstack([tfidf_vector, emotion_vector_sparse])
 
+        # -------------------
         # Prediction
+        # -------------------
         prediction = rf_model.predict(final_vector)[0]
+        prediction_proba = rf_model.predict_proba(final_vector)[0]
+
+        # Display prediction
         if prediction == 1:
             st.success("✅ Real News")
         else:
             st.error("🚨 Fake News Detected")
 
+        # Show probabilities
+        st.write(f"Prediction probabilities → Fake: {prediction_proba[0]:.2f}, Real: {prediction_proba[1]:.2f}")
+
+        # -------------------
         # Display emotion chart
+        # -------------------
         st.subheader("Emotion Profile")
         st.bar_chart(emotion_scores)
+
+        # -------------------
+        # Optional debug info
+        # -------------------
+        st.write("Cleaned text:", clean_text)
+        st.write("TF-IDF vector shape:", tfidf_vector.shape)
+        st.write("Emotion vector:", emotion_vector)
+        st.write("Final feature shape:", final_vector.shape)
